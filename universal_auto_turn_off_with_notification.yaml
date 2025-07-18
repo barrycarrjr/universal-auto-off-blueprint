@@ -1,0 +1,102 @@
+blueprint:
+  name: Universal Auto Turn Off (Switch, Light, Boolean, Climate)
+  description: >
+    Automatically turns off any switch, light, input_boolean, or climate entity after it has been on/active for a set duration.
+    Optionally sends a notification 5 minutes before shutoff. No timer entities required.
+  domain: automation
+  input:
+    target_entity:
+      name: Target Entity
+      description: The entity to monitor and turn off
+      selector:
+        entity:
+          domain:
+            - switch
+            - light
+            - input_boolean
+            - climate
+
+    max_on_duration:
+      name: Max On Duration
+      description: Time the entity is allowed to remain active before being turned off
+      default: "01:00:00"
+      selector:
+        duration:
+
+    enable_notification:
+      name: Enable Pre-Shutoff Notification
+      description: Send a notification 5 minutes before turning off the entity
+      default: false
+      selector:
+        boolean:
+
+    notify_service:
+      name: Notification Service (Optional)
+      description: Service to send the notification (e.g., notify.mobile_app_yourphone). Required if notifications are enabled.
+      default: ""
+      selector:
+        text:
+
+    notify_message:
+      name: Notification Message
+      description: Message to send before the entity is turned off
+      default: "Heads up: {{ entity_name }} will be turned off in 5 minutes."
+      selector:
+        text:
+
+mode: restart
+
+variables:
+  entity_name: "{{ state_attr(inputs.target_entity, 'friendly_name') or inputs.target_entity }}"
+  notify_enabled: !input enable_notification
+  notify_service: !input notify_service
+  notify_message: !input notify_message
+  entity_domain: "{{ inputs.target_entity.split('.')[0] }}"
+
+trigger:
+  - platform: state
+    entity_id: !input target_entity
+    to:
+      - "on"
+      - "heat"
+      - "cool"
+      - "auto"
+      - "idle"
+
+condition: []
+
+action:
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ notify_enabled and notify_service != '' }}"
+        sequence:
+          - delay:
+              seconds: >
+                {{ (as_timedelta(inputs.max_on_duration) - timedelta(minutes=5)).total_seconds() | int }}
+          - service: "{{ notify_service }}"
+            data:
+              message: "{{ notify_message }}"
+  - delay: !input max_on_duration
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ states(inputs.target_entity) in ['on', 'heat', 'cool', 'auto', 'idle'] }}"
+        sequence:
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ entity_domain in ['switch', 'light', 'input_boolean'] }}"
+                sequence:
+                  - service: "{{ entity_domain }}.turn_off"
+                    target:
+                      entity_id: !input target_entity
+              - conditions:
+                  - condition: template
+                    value_template: "{{ entity_domain == 'climate' }}"
+                sequence:
+                  - service: climate.set_hvac_mode
+                    target:
+                      entity_id: !input target_entity
+                    data:
+                      hvac_mode: "off"
