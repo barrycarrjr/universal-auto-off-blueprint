@@ -23,7 +23,7 @@ This blueprint is **reboot-safe**, using `for:` logic to ensure the countdown re
 
 Click below to import directly into Home Assistant:
 
-[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?repository_url=https://raw.githubusercontent.com/barrycarrjr/universal-auto-off-blueprint/main/blueprints/automation/barrycarrjr/universal_auto_turn_off_with_notification.yaml)
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https://raw.githubusercontent.com/barrycarrjr/universal-auto-off-blueprint/main/blueprints/automation/barrycarrjr/universal_auto_turn_off_with_notification.yaml)
 
 ---
 
