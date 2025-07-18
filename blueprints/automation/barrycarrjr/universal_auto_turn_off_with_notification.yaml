@@ -1,13 +1,14 @@
 blueprint:
   name: Universal Auto Turn Off (Switch, Light, Boolean, Climate)
   description: >
-    Automatically turns off any switch, light, input_boolean, or climate entity after it has been on/active for a set duration.
-    Optionally sends a notification 5 minutes before shutoff. No timer entities required.
+    Automatically turns off any switch, light, input_boolean, or climate entity
+    after it has been active for a specified duration. Optionally sends a notification
+    5 minutes before shutoff. No timer helpers or YAML edits required.
   domain: automation
   input:
     target_entity:
       name: Target Entity
-      description: The entity to monitor and turn off
+      description: Entity to monitor and turn off
       selector:
         entity:
           domain:
@@ -18,40 +19,42 @@ blueprint:
 
     max_on_duration:
       name: Max On Duration
-      description: Time the entity is allowed to remain active before being turned off
+      description: Time before entity should be turned off
       default: "01:00:00"
       selector:
         duration:
 
     enable_notification:
       name: Enable Pre-Shutoff Notification
-      description: Send a notification 5 minutes before turning off the entity
+      description: Sends a notification 5 minutes before automatic turn-off
       default: false
       selector:
         boolean:
 
     notify_service:
-      name: Notification Service (Optional)
-      description: Service to send the notification (e.g., notify.mobile_app_yourphone). Required if notifications are enabled.
+      name: Notification Service
+      description: e.g., notify.mobile_app_pixel_8
       default: ""
       selector:
         text:
 
     notify_message:
       name: Notification Message
-      description: Message to send before the entity is turned off
-      default: "Heads up: {{ entity_name }} will be turned off in 5 minutes."
+      description: Message sent before shutoff (supports `{{ entity_name }}`)
+      default: "⚠️ {{ entity_name }} will be turned off in 5 minutes."
       selector:
         text:
 
 mode: restart
 
 variables:
-  entity_name: "{{ state_attr(inputs.target_entity, 'friendly_name') or inputs.target_entity }}"
+  entity_id: !input target_entity
+  max_on_duration: !input max_on_duration
   notify_enabled: !input enable_notification
   notify_service: !input notify_service
   notify_message: !input notify_message
-  entity_domain: "{{ inputs.target_entity.split('.')[0] }}"
+  entity_name: "{{ state_attr(entity_id, 'friendly_name') or entity_id }}"
+  entity_domain: "{{ entity_id.split('.')[0] }}"
 
 trigger:
   - platform: state
@@ -73,15 +76,17 @@ action:
         sequence:
           - delay:
               seconds: >
-                {{ (as_timedelta(inputs.max_on_duration) - timedelta(minutes=5)).total_seconds() | int }}
+                {{ (as_timedelta(max_on_duration) - timedelta(minutes=5)).total_seconds() | int }}
           - service: "{{ notify_service }}"
             data:
               message: "{{ notify_message }}"
-  - delay: !input max_on_duration
+
+  - delay: "{{ max_on_duration }}"
+
   - choose:
       - conditions:
           - condition: template
-            value_template: "{{ states(inputs.target_entity) in ['on', 'heat', 'cool', 'auto', 'idle'] }}"
+            value_template: "{{ states(entity_id) in ['on', 'heat', 'cool', 'auto', 'idle'] }}"
         sequence:
           - choose:
               - conditions:
@@ -90,13 +95,22 @@ action:
                 sequence:
                   - service: "{{ entity_domain }}.turn_off"
                     target:
-                      entity_id: !input target_entity
+                      entity_id: "{{ entity_id }}"
               - conditions:
                   - condition: template
                     value_template: "{{ entity_domain == 'climate' }}"
                 sequence:
                   - service: climate.set_hvac_mode
                     target:
-                      entity_id: !input target_entity
+                      entity_id: "{{ entity_id }}"
                     data:
                       hvac_mode: "off"
+
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ notify_service != '' }}"
+                sequence:
+                  - service: "{{ notify_service }}"
+                    data:
+                      message: "✅ {{ entity_name }} has been automatically turned off."
