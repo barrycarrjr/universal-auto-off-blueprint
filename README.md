@@ -20,10 +20,10 @@ Automatically turn off any `switch`, `light`, `input_boolean`, or `climate` enti
 ## 📦 Import This Blueprint
 
 Paste this URL into Home Assistant when importing a blueprint:
-https://github.com/barrycarrjr/universal-auto-off-blueprint/blob/main/blueprints/automation/barry/universal_auto_turn_off_with_notification.yaml
+https://github.com/barrycarrjr/universal-auto-off-blueprint/blob/main/blueprints/automation/barrycarrjr/universal_auto_turn_off_with_notification.yaml
 
 Or download and place it manually in:
-config/blueprints/automation/barry/universal_auto_turn_off_with_notification.yaml
+config/blueprints/automation/barrycarrjr/universal_auto_turn_off_with_notification.yaml
 
 
 Then reload blueprints under **Settings → Automations & Scenes → ⋮ → Reload Blueprints**.
@@ -59,5 +59,5 @@ Then reload blueprints under **Settings → Automations & Scenes → ⋮ → Rel
 ```text
 blueprints/
 └── automation/
-    └── barry/
+    └── barrycarrjr/
         └── universal_auto_turn_off_with_notification.yaml
