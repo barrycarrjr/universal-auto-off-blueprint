@@ -2,7 +2,7 @@
 
 Automatically turn off any `switch`, `light`, `input_boolean`, or `climate` entity in Home Assistant after it has been active for a specified duration — with optional pre-shutoff notifications.
 
-[![hass-blueprint](https://img.shields.io/badge/Home%20Assistant-Blueprint-41BDF5?logo=home-assistant&logoColor=white)](https://www.home-assistant.io/blueprints/)
+[![hass-blueprint](https://img.shields.io/badge/Home%20Assistant-Blueprint-41BDF5?logo=home-assistant&logoColor=white)](https://www.home-assistant.io/docs/blueprint/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ---
