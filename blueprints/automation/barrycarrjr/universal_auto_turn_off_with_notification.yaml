@@ -4,8 +4,10 @@ blueprint:
     Automatically turns off any switch, light, input_boolean, or climate entity
     after it has been continuously active for a specified duration.
     This version is reboot-safe and uses `for:` logic to persist across restarts.
-    The trigger treats `unavailable` as still-on so brief integration disconnects
-    don't reset the timer.
+
+    Uses a state trigger with `not_to` so any non-off state arms the timer.
+    `unavailable` is excluded from `not_to`, so it does not trigger on flap-recovery,
+    but a long flap will reset the for-clock — acceptable for stable integrations.
   domain: automation
   input:
     target_entity:
@@ -33,9 +35,12 @@ variables:
   entity_domain: "{{ entity_id.split('.')[0] }}"
 
 trigger:
-  - platform: template
-    value_template: >
-      {{ states(entity_id) not in ['off', 'unknown'] }}
+  - platform: state
+    entity_id: !input target_entity
+    not_to:
+      - "off"
+      - "unknown"
+      - "unavailable"
     for: !input max_on_duration
 
 condition: []
