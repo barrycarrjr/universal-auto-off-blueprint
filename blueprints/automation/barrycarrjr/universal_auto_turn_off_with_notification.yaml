@@ -3,11 +3,17 @@ blueprint:
   description: >
     Automatically turns off any switch, light, input_boolean, or climate entity
     after it has been continuously active for a specified duration.
-    This version is reboot-safe and uses `for:` logic to persist across restarts.
+
+    Reboot-Safe / Reload-Safe: catches the case where the entity is already in
+    the matched state when the trigger attaches (HA restart, automation reload,
+    or blueprint update). A periodic re-check (every 5 minutes) evaluates
+    last_changed against max_on_duration, so even a missed edge will be cleaned
+    up within 5 minutes of the timer expiring.
 
     Uses a state trigger with `not_to` so any non-off state arms the timer.
-    `unavailable` is excluded from `not_to`, so it does not trigger on flap-recovery,
-    but a long flap will reset the for-clock — acceptable for stable integrations.
+    `unavailable` is excluded from `not_to`, so it does not trigger on
+    flap-recovery, but a long flap will reset the for-clock — acceptable for
+    stable integrations.
   domain: automation
   input:
     target_entity:
@@ -33,6 +39,11 @@ mode: single
 variables:
   entity_id: !input target_entity
   entity_domain: "{{ entity_id.split('.')[0] }}"
+  max_on_duration: !input max_on_duration
+  max_seconds: >-
+    {{ (max_on_duration.hours | default(0)) * 3600
+       + (max_on_duration.minutes | default(0)) * 60
+       + (max_on_duration.seconds | default(0)) }}
 
 trigger:
   - platform: state
@@ -42,8 +53,25 @@ trigger:
       - "unknown"
       - "unavailable"
     for: !input max_on_duration
+    id: state_for
+  - platform: homeassistant
+    event: start
+    id: ha_start
+  - platform: time_pattern
+    minutes: "/5"
+    id: periodic
 
-condition: []
+condition:
+  - condition: template
+    value_template: >-
+      {% if trigger.id == 'state_for' %}
+        true
+      {% else %}
+        {% set e = states[entity_id] %}
+        {{ e is not none
+           and e.state not in ['off', 'unknown', 'unavailable']
+           and (now() - e.last_changed).total_seconds() >= (max_seconds | int) }}
+      {% endif %}
 
 action:
   - choose:
